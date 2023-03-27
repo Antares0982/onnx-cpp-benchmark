@@ -1,0 +1,3 @@
+[submodule "src/lockfree-threadpool"]
+	path = src/lockfree-threadpool
+	url = https://github.com/Antares0982/lockfree-threadpool
