@@ -29,7 +29,7 @@
 #include <iostream>
 
 namespace OnnxBenchmarks {
-    class Session;
+    class OnnxModel;
 
     template<typename ...T>
     void Logging(T &&... args) {
@@ -41,7 +41,25 @@ namespace OnnxBenchmarks {
         (std::cerr << ... << args) << std::endl;
     }
 
-    void run_benchmark(Session &session);
+    /// Generate a random number in [0, a)
+    template<typename T = size_t>
+    T randomNumber(size_t a) {
+        thread_local unsigned long long x = 123456789, y = 362436069, z = 521288629;
+
+        unsigned long long t;
+        x ^= x << 16;
+        x ^= x >> 5;
+        x ^= x << 1;
+
+        t = x;
+        x = y;
+        y = z;
+        z = t ^ x ^ y;
+
+        return static_cast<T>(z % a);
+    }
+
+    void run_benchmark(OnnxModel &session);
 }
 
 

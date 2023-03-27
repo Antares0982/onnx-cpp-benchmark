@@ -8,7 +8,7 @@ project(testproject LANGUAGES CXX)
 
 add_library(common INTERFACE)
 
-file(GLOB cpp_path src/*.cpp)
+file(GLOB_RECURSE cpp_path src/*.cpp)
 
 target_compile_options(common INTERFACE -Wall -pthread -Werror=return-type)
 

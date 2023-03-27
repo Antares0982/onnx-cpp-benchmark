@@ -3,7 +3,7 @@
 #include <thread>
 #include <chrono>
 #include "lockfree-threadpool/src/ThreadPool.h"
-#include "session.h"
+#include "model_wrapper.h"
 #include "benchmarks.h"
 
 
@@ -17,7 +17,7 @@ int main(int argc, char *argv[]) {
         exit(1);
     }
 
-    Session session;
+    OnnxModel session;
     session.Initialize(argc, argv);
 
     run_benchmark(session);
