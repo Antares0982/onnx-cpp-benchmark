@@ -43,7 +43,7 @@ namespace OnnxBenchmarks {
 
     /// Generate a random number in [0, a)
     template<typename T = size_t>
-    T randomNumber(size_t a) {
+    T RandomNumber(size_t a) {
         thread_local unsigned long long x = 123456789, y = 362436069, z = 521288629;
 
         unsigned long long t;
@@ -59,7 +59,7 @@ namespace OnnxBenchmarks {
         return static_cast<T>(z % a);
     }
 
-    void run_benchmark(OnnxModel &session);
+    void RunBenchmark(OnnxModel &session);
 }
 
 

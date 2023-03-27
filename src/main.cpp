@@ -20,7 +20,7 @@ int main(int argc, char *argv[]) {
     OnnxModel session;
     session.Initialize(argc, argv);
 
-    run_benchmark(session);
+    RunBenchmark(session);
 
     return 0;
 }

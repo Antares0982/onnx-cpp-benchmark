@@ -36,20 +36,29 @@ namespace OnnxBenchmarks {
         return pool;
     }
 
-    void run_benchmark(OnnxBenchmarks::OnnxModel &session) {
+    void Run_SingleThreadBenchmark(OnnxBenchmarks::OnnxModel &session){
+        size_t arraySize = session.GetInputBufferSize();
+
+        const bool isBatchSupported = session.IsBatchSupported();
+
+        {
+            auto testArray = Antares::MemoryPool::NewArray<float>(arraySize);
+            for (size_t i = 0; i < arraySize; i++) {
+                testArray[i] = RandomNumber<float>(10000) / 5000.f - 1.f;
+            }
+
+            auto start = Clock::now();
+            for (size_t i = 0; i < 1000; i++) {
+                auto output = session.Run();
+            }
+        }
+    }
+
+    void RunBenchmark(OnnxBenchmarks::OnnxModel &session) {
         auto &pool = GetThreadPool();
-        size_t arraySize = session.GetArraySize();
 
         // testing single thread
-        auto testArray = Antares::MemoryPool::NewArray<float>(arraySize);
-        for (size_t i = 0; i < arraySize; i++) {
-            testArray[i] = randomNumber<float>(10000) / 5000.f - 1.f;
-        }
-
-        auto start = Clock::now();
-        for (size_t i = 0; i < 1000; i++) {
-            auto output = session.Run();
-        }
+        Run_SingleThreadBenchmark(session);
     }
 }
 

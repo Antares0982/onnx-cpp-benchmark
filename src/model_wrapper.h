@@ -73,7 +73,7 @@ namespace OnnxBenchmarks {
 
         [[nodiscard]] size_t GetInputBufferSize() const;
 
-        [[nodiscard]] bool isBatchSupported() const { return batchSupported; }
+        [[nodiscard]] bool IsBatchSupported() const { return batchSupported; }
 
         void Run(float *inBuffer, float *outBuffer, int64_t batch);
 
