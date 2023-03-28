@@ -10,6 +10,11 @@ add_library(common INTERFACE)
 
 file(GLOB_RECURSE cpp_path src/*.cpp)
 
+if (CMAKE_BUILD_TYPE MATCHES "Rel*")
+    target_compile_options(common INTERFACE -O3)
+else ()
+endif ()
+
 target_compile_options(common INTERFACE -Wall -pthread -Werror=return-type)
 
 target_link_libraries(common INTERFACE onnxruntime)

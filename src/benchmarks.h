@@ -27,6 +27,7 @@
 #define TESTPROJECT_BENCHMARKS_H
 
 #include <iostream>
+#include <chrono>
 
 namespace OnnxBenchmarks {
     class OnnxModel;
@@ -59,7 +60,44 @@ namespace OnnxBenchmarks {
         return static_cast<T>(z % a);
     }
 
-    void RunBenchmark(OnnxModel &session);
+    class BenchMark {
+    public:
+        using Clock = std::chrono::high_resolution_clock;
+
+        struct ClockGuard {
+            Clock::duration &duration;
+            Clock::time_point start;
+
+            explicit ClockGuard(Clock::duration &d) : duration(d) {
+                start = Clock::now();
+            }
+
+            ~ClockGuard() {
+                duration = Clock::now() - start;
+            }
+        };
+
+    private:
+        OnnxModel *model = nullptr;
+
+    public:
+        explicit BenchMark(OnnxModel *inModel);
+
+        ~BenchMark() = default;
+
+        void PrintModelInfo();
+
+        void RunBenchmark();
+
+    private:
+            void WarmUp();
+
+        void Run_SingleThreadBenchmark();
+
+        void Run_MultiThreadBenchmark();
+    };
+
+
 }
 
 

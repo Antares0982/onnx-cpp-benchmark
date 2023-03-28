@@ -26,6 +26,7 @@
 #include "model_wrapper.h"
 #include <thread>
 #include "lockfree-threadpool/src/MemoryPool/src/MemoryPool.h"
+#include "benchmarks.h"
 
 namespace OnnxBenchmarks {
     struct Defer {
@@ -67,15 +68,30 @@ namespace OnnxBenchmarks {
             throw std::length_error("Not enough arguments");
         }
 
-        session = std::make_unique<Ort::Session>(env, argv[1], session_options);
+
+        std::chrono::high_resolution_clock::duration duration;
+
+        {
+            std::unique_ptr<BenchMark::ClockGuard> clockGuard;
+            if (benchMark) {
+                clockGuard = std::make_unique<BenchMark::ClockGuard>(duration);
+            }
+
+            session = std::make_unique<Ort::Session>(env, argv[1], session_options);
+        }
+
+        if (benchMark) {
+            Logging("Time used to load model ", argv[1], ": ",
+                    std::chrono::duration_cast<std::chrono::milliseconds>(duration).count(), "ms");
+        }
 
 
         inputLen = session->GetInputCount();
         outputLen = session->GetOutputCount();
         inputNames.reserve(inputLen);
         outputNames.reserve(outputLen);
-        inputDims.reserve(inputLen);
-        outputDims.reserve(outputLen);
+        inputDims.resize(inputLen);
+        outputDims.resize(outputLen);
         inBufferLenEachDim.reserve(inputLen);
         outBufferLenEachDim.reserve(outputLen);
 
@@ -109,7 +125,9 @@ namespace OnnxBenchmarks {
             for (size_t j = 0; j < sizeLen; ++j) {
                 auto val = tensorInfo.GetShape()[j];
                 dim.emplace_back(val);
-                bufferLen *= val;
+                if (val > 0) {
+                    bufferLen *= val;
+                }
             }
 
             inBufferLenEachDim.emplace_back(bufferLen);
@@ -126,7 +144,9 @@ namespace OnnxBenchmarks {
             for (size_t j = 0; j < sizeLen; ++j) {
                 auto val = tensorInfo.GetShape()[j];
                 dim.emplace_back(val);
-                bufferLen *= val;
+                if (val > 0) {
+                    bufferLen *= val;
+                }
             }
 
             outBufferLenEachDim.emplace_back(bufferLen);
@@ -138,6 +158,14 @@ namespace OnnxBenchmarks {
     size_t OnnxModel::GetInputBufferSize() const {
         size_t size = 0;
         for (const auto &value: inBufferLenEachDim) {
+            size += value;
+        }
+        return size;
+    }
+
+    size_t OnnxModel::GetOutputBufferSize() const {
+        size_t size = 0;
+        for (const auto &value: outBufferLenEachDim) {
             size += value;
         }
         return size;

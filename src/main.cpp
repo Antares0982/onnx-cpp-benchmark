@@ -7,20 +7,21 @@
 #include "benchmarks.h"
 
 
-
 int main(int argc, char *argv[]) {
     using namespace OnnxBenchmarks;
     if (argc == 1) {
         std::cerr
-                << "No argument, please specify the size of input tensor, e.g. ./onnxbenchmark model.onnx 3 8 8 for 3*8*8 tensor"
+                << "No argument, please specify the model path, e.g. ./onnxbenchmark ./model/model.onnx"
                 << std::endl;
         exit(1);
     }
 
-    OnnxModel session;
-    session.Initialize(argc, argv);
+    OnnxModel model;
+    BenchMark benchMark(&model);
 
-    RunBenchmark(session);
+    model.Initialize(argc, argv);
+
+    benchMark.RunBenchmark();
 
     return 0;
 }

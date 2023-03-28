@@ -30,18 +30,22 @@
 
 
 namespace OnnxBenchmarks {
+    class BenchMark;
+
     class OnnxModel {
         Ort::Env env;
         Ort::SessionOptions session_options;
         std::unique_ptr<Ort::Session> session;
         size_t inputLen = 0;
         size_t outputLen = 0;
-        std::vector<std::vector<int64_t >> inputDims;
-        std::vector<std::vector<int64_t >> outputDims;
+        std::vector<std::vector<int64_t>> inputDims;
+        std::vector<std::vector<int64_t>> outputDims;
         std::vector<std::string> inputNames;
         std::vector<std::string> outputNames;
         std::vector<size_t> inBufferLenEachDim;
         std::vector<size_t> outBufferLenEachDim;
+
+        BenchMark *benchMark = nullptr;
 
         const char **inNamePointers = nullptr;
         const char **outNamePointers = nullptr;
@@ -54,6 +58,10 @@ namespace OnnxBenchmarks {
         ~OnnxModel();
 
         void Initialize(size_t argc, char **argv);
+
+        void RegisterBenchmark(BenchMark *inBenchMark) {
+            benchMark = inBenchMark;
+        }
 
         Ort::Session &GetSession() {
             return *session;
@@ -71,7 +79,17 @@ namespace OnnxBenchmarks {
             return outputLen;
         }
 
+        [[nodiscard]] const auto &GetInputNames() const {
+            return inputNames;
+        }
+
+        [[nodiscard]] const auto &GetOutputNames() const {
+            return outputNames;
+        }
+
         [[nodiscard]] size_t GetInputBufferSize() const;
+
+        [[nodiscard]] size_t GetOutputBufferSize() const;
 
         [[nodiscard]] bool IsBatchSupported() const { return batchSupported; }
 
