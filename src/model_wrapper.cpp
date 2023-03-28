@@ -46,6 +46,7 @@ namespace OnnxBenchmarks {
     OnnxModel::OnnxModel() { // NOLINT(cppcoreguidelines-pro-type-member-init)
         env = Ort::Env(ORT_LOGGING_LEVEL_WARNING, "test");
 #ifdef CUDA_ENABLED
+        Logging("Note: CUDA enabled");
         OrtCUDAProviderOptions options;
         options.device_id = 0;
         session_options.AppendExecutionProvider_CUDA(options);

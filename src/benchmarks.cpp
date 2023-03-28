@@ -121,7 +121,7 @@ namespace OnnxBenchmarks {
         const bool isBatchSupported = model->IsBatchSupported();
 
         static constexpr size_t RunRepeatTimes = 10;
-        static constexpr size_t MaxTotalTaskPerRun = 1000;
+        static const size_t MaxTotalTaskPerRun = 100 * std::thread::hardware_concurrency();
 
         auto testInBatch = [this, inArraySize, outArraySize](size_t batch) mutable {
             Logging("Testing batchNum = ", batch, "...");
