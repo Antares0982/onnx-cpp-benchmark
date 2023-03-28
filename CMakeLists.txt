@@ -25,6 +25,7 @@ target_compile_options(common INTERFACE -pthread)
 target_link_libraries(common INTERFACE pthread)
 
 add_subdirectory(cmake/cuda_test)
+target_link_libraries(common INTERFACE cudaOptions)
 ##############################################################################
 set(BUILD_TARGET onnxbenchmark)
 add_executable(${BUILD_TARGET} ${cpp_path})
