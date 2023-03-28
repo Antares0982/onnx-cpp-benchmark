@@ -91,7 +91,7 @@ namespace OnnxBenchmarks {
                     }
                 }
                 auto elapsed = DurationToMilliseconds(t_duration);
-                auto avgElapsed = static_cast<double>(elapsed) / RunRepeatTimes;
+                auto avgElapsed = static_cast<double>(elapsed) / static_cast<double>(RunRepeatTimes);
                 auto avgEachInput = avgElapsed / static_cast<double>(batch);
 
                 Logging("BatchNum = ", batch, " finished, repeated: ", RunRepeatTimes, " times, time elapsed: ",
