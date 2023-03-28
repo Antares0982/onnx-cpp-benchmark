@@ -21,6 +21,7 @@ target_link_libraries(common INTERFACE onnxruntime)
 
 target_compile_definitions(common INTERFACE USE_MEMORY_POOL)
 
+add_subdirectory(cmake/cuda_test)
 ##############################################################################
 set(BUILD_TARGET onnxbenchmark)
 add_executable(${BUILD_TARGET} ${cpp_path})

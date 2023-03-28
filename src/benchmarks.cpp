@@ -243,7 +243,7 @@ namespace OnnxBenchmarks {
 
         WarmUp();
 
-        // ONNX_BENCHMARK_RUN(SingleThreadBenchmark);
+        ONNX_BENCHMARK_RUN(SingleThreadBenchmark);
         ONNX_BENCHMARK_RUN(MultiThreadBenchmark);
 
 #undef ONNX_BENCHMARK_RUN
