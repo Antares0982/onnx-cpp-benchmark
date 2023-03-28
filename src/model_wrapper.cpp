@@ -28,6 +28,20 @@
 #include "lockfree-threadpool/src/MemoryPool/src/MemoryPool.h"
 
 namespace OnnxBenchmarks {
+    struct Defer {
+        std::function<void()> func;
+
+        Defer(std::function<void()> func) : func(std::move(func)) {} // NOLINT(google-explicit-constructor)
+        ~Defer() {
+            func();
+        }
+    };
+
+    inline auto &GetMemoryInfo() {
+        static Ort::MemoryInfo memoryInfo = Ort::MemoryInfo::CreateCpu(OrtArenaAllocator, OrtMemTypeDefault);
+        return memoryInfo;
+    }
+
     OnnxModel::OnnxModel() { // NOLINT(cppcoreguidelines-pro-type-member-init)
         env = Ort::Env(ORT_LOGGING_LEVEL_WARNING, "test");
 #ifdef CUDA_ENABLED
@@ -44,8 +58,8 @@ namespace OnnxBenchmarks {
     }
 
     OnnxModel::~OnnxModel() {
-        delete[]inNamePointers;
-        delete[]outNamePointers;
+        delete[] inNamePointers;
+        delete[] outNamePointers;
     }
 
     void OnnxModel::Initialize(size_t argc, char **argv) {
@@ -138,6 +152,30 @@ namespace OnnxBenchmarks {
         Antares::MemoryPool::Free(outValues);
     }
 
+    void OnnxModel::RunWithOutIndex(size_t index, float *inBuffer, float *outBuffer, int64_t batch) {
+        auto inValues = _create_in_values(inBuffer, batch);
+        auto outValue = _create_out_value_index(index, outBuffer, batch);
+        session->Run(Ort::RunOptions{nullptr}, inNamePointers, inValues, inputLen, &outNamePointers[index], &outValue,
+                     1);
+        Antares::MemoryPool::Free(inValues);
+    }
+
+    void OnnxModel::RunWithOutIndexes(std::vector<size_t> indexes, float *inBuffer, float *outBuffer, int64_t batch) {
+        auto inValues = _create_in_values(inBuffer, batch);
+        auto outValues = (Ort::Value *) Antares::MemoryPool::MallocTemp(indexes.size() * sizeof(Ort::Value),
+                                                                        alignof(Ort::Value));
+        for (size_t i = 0; i < indexes.size(); ++i) {
+            new(outValues + i) Ort::Value(_create_out_value_index(indexes[i], outBuffer, batch));
+            outBuffer += batch * outBufferLenEachDim[indexes[i]];
+        }
+        auto names = _get_outnames_by_indexes(indexes);
+        session->Run(Ort::RunOptions{nullptr}, inNamePointers, inValues, inputLen, names, outValues,
+                     indexes.size());
+        Antares::MemoryPool::Free(inValues);
+        Antares::MemoryPool::Free(outValues);
+        Antares::MemoryPool::Free(names);
+    }
+
     void OnnxModel::_gen_name_pointer() {
         inNamePointers = new const char *[inputLen];
         outNamePointers = new const char *[outputLen];
@@ -150,15 +188,36 @@ namespace OnnxBenchmarks {
         }
     }
 
+    const char **OnnxModel::_get_outnames_by_indexes(const std::vector<size_t> &indexes) {
+        if (nullptr == outNamePointers) {
+            _gen_name_pointer();
+        }
+        const char **answer = Antares::MemoryPool::NewTempArray<const char *>(indexes.size());
+        for (size_t i = 0; i < indexes.size(); ++i) {
+            answer[i] = outNamePointers[indexes[i]];
+        }
+        return answer;
+    }
+
     Ort::Value *OnnxModel::_create_in_values(float *inBuffer, size_t batchNum) const {
-        auto memory_info = Ort::MemoryInfo::CreateCpu(OrtArenaAllocator, OrtMemTypeDefault);
         auto valueBuffer = (Ort::Value *) Antares::MemoryPool::MallocTemp(inputLen * sizeof(Ort::Value),
                                                                           alignof(Ort::Value));
         for (size_t i = 0; i < inputLen; ++i) {
-            new(valueBuffer + i) Ort::Value(
-                    Ort::Value::CreateTensor<float>(memory_info, inBuffer, batchNum * inBufferLenEachDim[i],
-                                                    outputDims[i].data(),
-                                                    outputDims[i].size()));
+            if (batchSupported) {
+                auto dimsArray = Antares::MemoryPool::NewTempArray<int64_t>(inputDims[i].size());
+                dimsArray[0] = static_cast<int64_t>(batchNum);
+                for (size_t j = 1; j < inputDims[i].size(); ++j) {
+                    dimsArray[j] = inputDims[i][j];
+                }
+                new(valueBuffer + i) Ort::Value(
+                        Ort::Value::CreateTensor<float>(GetMemoryInfo(), inBuffer, batchNum * inBufferLenEachDim[i],
+                                                        dimsArray, inputDims[i].size()));
+                Antares::MemoryPool::DeleteArray(dimsArray, inputDims[i].size());
+            } else {
+                new(valueBuffer + i) Ort::Value(
+                        Ort::Value::CreateTensor<float>(GetMemoryInfo(), inBuffer, batchNum * inBufferLenEachDim[i],
+                                                        inputDims[i].data(), inputDims[i].size()));
+            }
             inBuffer += batchNum * inBufferLenEachDim[i];
         }
 
@@ -166,17 +225,48 @@ namespace OnnxBenchmarks {
     }
 
     Ort::Value *OnnxModel::_create_out_values(float *outBuffer, size_t batchNum) const {
-        auto memory_info = Ort::MemoryInfo::CreateCpu(OrtArenaAllocator, OrtMemTypeDefault);
         auto valueBuffer = (Ort::Value *) Antares::MemoryPool::MallocTemp(outputLen * sizeof(Ort::Value),
                                                                           alignof(Ort::Value));
         for (size_t i = 0; i < outputLen; ++i) {
-            new(valueBuffer + i) Ort::Value(
-                    Ort::Value::CreateTensor<float>(memory_info, outBuffer, batchNum * outBufferLenEachDim[i],
-                                                    outputDims[i].data(),
-                                                    outputDims[i].size()));
+            if (batchSupported) {
+                auto dimsArray = Antares::MemoryPool::NewTempArray<int64_t>(outputDims[i].size());
+                dimsArray[0] = static_cast<int64_t>(batchNum);
+                for (size_t j = 1; j < outputDims[i].size(); ++j) {
+                    dimsArray[j] = outputDims[i][j];
+                }
+                new(valueBuffer + i) Ort::Value(
+                        Ort::Value::CreateTensor<float>(GetMemoryInfo(), outBuffer, batchNum * outBufferLenEachDim[i],
+                                                        dimsArray, outputDims[i].size()));
+                Antares::MemoryPool::DeleteArray(dimsArray, outputDims[i].size());
+            } else {
+                new(valueBuffer + i) Ort::Value(
+                        Ort::Value::CreateTensor<float>(GetMemoryInfo(), outBuffer, batchNum * outBufferLenEachDim[i],
+                                                        outputDims[i].data(), outputDims[i].size()));
+            }
             outBuffer += batchNum * outBufferLenEachDim[i];
         }
 
         return valueBuffer;
     }
+
+    Ort::Value OnnxModel::_create_out_value_index(size_t index, float *outBuffer, size_t batchNum) const {
+        if (batchSupported) {
+            auto dimsArray = Antares::MemoryPool::NewTempArray<int64_t>(outputDims[index].size());
+            auto size = outputDims[index].size();
+            Defer defer_run([dimsArray, size] {
+                Antares::MemoryPool::DeleteArray(dimsArray, size);
+            });
+            dimsArray[0] = static_cast<int64_t>(batchNum);
+            for (size_t j = 1; j < outputDims[index].size(); ++j) {
+                dimsArray[j] = outputDims[index][j];
+            }
+            return Ort::Value::CreateTensor<float>(GetMemoryInfo(), outBuffer, batchNum * outBufferLenEachDim[index],
+                                                   dimsArray, outputDims[index].size());
+        } else {
+            return Ort::Value::CreateTensor<float>(GetMemoryInfo(), outBuffer, batchNum * outBufferLenEachDim[index],
+                                                   outputDims[index].data(), outputDims[index].size());
+        }
+    }
+
+
 }

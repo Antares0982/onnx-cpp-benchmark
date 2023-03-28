@@ -77,12 +77,20 @@ namespace OnnxBenchmarks {
 
         void Run(float *inBuffer, float *outBuffer, int64_t batch);
 
+        void RunWithOutIndex(size_t index, float *inBuffer, float *outBuffer, int64_t batch);
+
+        void RunWithOutIndexes(std::vector<size_t> indexes, float *inBuffer, float *outBuffer, int64_t batch);
+
     private:
         void _gen_name_pointer();
+
+        const char **_get_outnames_by_indexes(const std::vector<size_t> &indexes);
 
         Ort::Value *_create_in_values(float *inBuffer, size_t batchNum) const;
 
         Ort::Value *_create_out_values(float *outBuffer, size_t batchNum) const;
+
+        Ort::Value _create_out_value_index(size_t index, float *outBuffer, size_t batchNum) const;
     };
 }
 #endif //TESTPROJECT_MODEL_WRAPPER_H
